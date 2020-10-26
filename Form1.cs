@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
-using System.Security.Cryptography;
+using System.Data.SQLite;
+using System.Security.Cryptography.X509Certificates;
+using System.Transactions;
 
 namespace PasswordManagement
 {
@@ -21,11 +16,12 @@ namespace PasswordManagement
         {
             InitializeComponent();
             Trace.WriteLine("\n" + dispHeight + "\n" + dispWidth);
+            Databse();
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
+
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -58,7 +54,7 @@ namespace PasswordManagement
             {
                 character += textBox4.Text;
             }
-                //character += "!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"
+            //character += "!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"
             if (radioButton3.Checked == true)
             {
                 character += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -90,6 +86,61 @@ namespace PasswordManagement
         {
 
         }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            Insert();
+        }
+
+
+        public SQLiteConnectionStringBuilder sqlConnection = new SQLiteConnectionStringBuilder { DataSource = "data.db" };
+
+        private void Databse()
+        {
+            //SQliteのテーブルを作成する(既に存在する場合はスキップしてくれるらしい)
+            using (var DB = new SQLiteConnection(sqlConnection.ToString()))
+            {
+                DB.Open();
+                using (var command = new SQLiteCommand(DB))
+                {
+                    //テーブル作成
+                    //IF NOT EXISTSでテーブルが存在しているか確認して、存在していなければ作成する
+                    command.CommandText = "CREATE TABLE IF NOT EXISTS data( no INTEGER NOT NULL PRIMARY KEY, id TEXT NOT NULL, pass TEXT NOTNULL )";
+                }
+                DB.Close();
+            }
+        }
+
+        private void Insert()
+        {
+            //DBとのコネクションの作成
+            using (var connection = new SQLiteConnection(sqlConnection.ToString()))
+            {
+                //コネクションをオープンする
+                connection.Open();
+                SQLiteTransaction transaction = null;
+                try
+                {
+                    //トランザクションの開始
+                    transaction = connection.BeginTransaction();
+
+                    //コマンドの生成
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = $"INSERT INTO data( Id, Pass ) VALUES ( '{textBox1.Text}', '{textBox5.Text}' )";
+                        command.ExecuteNonQuery();
+
+                        //コミットする
+                        transaction.Commit();
+                    }
+                }
+                catch (Exception e) 
+                {
+                    Trace.WriteLine(e);
+                }
+            }
+        }
+
 
     }
 }
